@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nicocconing - Réservation de Massage</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #4a0072, #ff6a00);
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            max-width: 90%;
+            width: 500px;
+        }
+
+        .header img {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            border-radius: 15px;
+            margin-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        .calendar {
+            margin-bottom: 1.5rem;
+        }
+
+        #monthYear {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            font-weight: 300;
+        }
+
+        .days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+
+        .days div {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 5px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .days div:hover:not(.disabled) {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+
+        .days div.selected {
+            background: #ff6a00;
+            font-weight: 600;
+            transform: scale(1.1);
+        }
+
+        .days div.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .booking-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        select, button {
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-size: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        select {
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="white" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+            background-repeat: no-repeat;
+            background-position-x: 95%;
+            background-position-y: 50%;
+        }
+
+        select:focus, button:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(255, 106, 0, 0.5);
+        }
+
+        button {
+            background: #ff6a00;
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 1;
+            }
+            20% {
+                transform: scale(25, 25);
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: scale(40, 40);
+            }
+        }
+
+        button:focus:not(:active)::after {
+            animation: ripple 1s ease-out;
+        }
+
+        .popup {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 2rem;
+            border-radius: 15px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .popup p {
+            margin-bottom: 1rem;
+        }
+
+        .popup button {
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .days div {
+                font-size: 0.8rem;
+                padding: 8px 3px;
+            }
+
+            select, button {
+                font-size: 0.9rem;
+            }
+
+            #monthYear {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="popup" id="welcomePopup">
+        <p>Bonjour Bérengère 👋🏻</p>
+        <button onclick="closePopup('welcomePopup')">Fermer</button>
+    </div>
+
+    <div class="popup" id="confirmationPopup" style="display: none;">
+        <p id="confirmationMessage"></p>
+        <a id="googleCalendarLink" href="#" target="_blank"><button>Ajouter à mon agenda</button></a>
+        <button onclick="closePopup('confirmationPopup')">Fermer</button>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <img src="https://www.officiel-massage.fr/wp-content/uploads/2012/12/HUILE2.jpg" alt="Massage">
+        </div>
+        <h1>Nicocconing - Réservez votre Massage</h1>
+        <div class="calendar">
+            <p id="monthYear"></p>
+            <div class="days" id="days"></div>
+        </div>
+
+        <div class="booking-form">
+            <select id="massageType">
+                <option value="" disabled selected>Choisissez le type de massage</option>
+                <option value="pieds">Massage des pieds</option>
+                <option value="corps">Massage corps entier</option>
+                <option value="caliente">Massage caliente</option>
+                <option value="dos">Massage du dos</option>
+            </select>
+
+            <select id="duration">
+                <option value="" disabled selected>Choisissez la durée</option>
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="45">45 minutes</option>
+                <option value="60">1 heure</option>
+            </select>
+
+            <select id="timeSelect">
+                <option value="" disabled selected>Choisissez l'heure</option>
+                <option value="09:00">09:00</option>
+                <option value="10:00">10:00</option>
+                <option value="11:00">11:00</option>
+                <option value="12:00">12:00</option>
+                <option value="13:00">13:00</option>
+                <option value="14:00">14:00</option>
+                <option value="15:00">15:00</option>
+                <option value="16:00">16:00</option>
+                <option value="17:00">17:00</option>
+                <option value="18:00">18:00</option>
+            </select>
+
+            <button onclick="book()">Réserver</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedDate = null;
+        let selectedTime = null;
+
+        function init() {
+            showCalendar();
+            document.getElementById("welcomePopup").style.display = 'block';
+        }
+
+        function closePopup(popupId) {
+            document.getElementById(popupId).style.display = 'none';
+        }
+
+        function showCalendar() {
+            const daysElement = document.getElementById("days");
+            const monthYearElement = document.getElementById("monthYear");
+
+            const now = new Date();
+            const month = now.getMonth();
+            const year = now.getFullYear();
+
+            monthYearElement.textContent = `${now.toLocaleString('fr-FR', { month: 'long' })} ${year}`;
+
+            daysElement.innerHTML = '';
+            const daysInWeek = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+            daysInWeek.forEach(day => {
+                const dayElement = document.createElement('div');
+                dayElement.textContent = day;
+                daysElement.appendChild(dayElement);
+            });
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 1; i < (firstDay === 0 ? 7 : firstDay); i++) {
+                daysElement.appendChild(document.createElement('div'));
+            }
+
+            for (let i = 1; i <= lastDate; i++) {
+                const dayElement = document.createElement('div');
+                dayElement.textContent = i;
+                const date = new Date(year, month, i);
+                if (date < now) {
+                    dayElement.classList.add('disabled');
+                } else {
+                    dayElement.onclick = function() {
+                        selectDate(i);
+                    };
+                }
+                daysElement.appendChild(dayElement);
+            }
+        }
+
+        function selectDate(day) {
+            const days = document.querySelectorAll('.days div');
+            days.forEach((d, index) => {
+                if (index >= 7 && !d.classList.contains('disabled')) {
+                    d.classList.remove('selected');
+                    if (d.textContent == day) {
+                        d.classList.add('selected');
+                    }
+                }
+            });
+
+            const now = new Date();
+            selectedDate = new Date(now.getFullYear(), now.getMonth(), day);
+        }
+
+        function formatDateForGoogleCalendar(date) {
+            return date.toISOString().replace(/-|:|\.\d\d\d/g, "");
+        }
+
+        function createGoogleCalendarLink(massageType, duration, startDate, endDate) {
+            const start = formatDateForGoogleCalendar(startDate);
+            const end = formatDateForGoogleCalendar(endDate);
+            
+            const text = encodeURIComponent(`Massage ${massageType} - Nicocconing`);
+            const details = encodeURIComponent(`Réservation pour un massage ${massageType} d'une durée de ${duration} minutes`);
+            const location = encodeURIComponent('Nicocconing');
+
+            return `https://www.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}/${end}&details=${details}&location=${location}`;
+        }
+
+        function book() {
+            if (!selectedDate) {
+                alert("Veuillez sélectionner une date.");
+                return;
+            }
+
+            selectedTime = document.getElementById("timeSelect").value;
+            const massageType = document.getElementById("massageType").value;
+            const duration = document.getElementById("duration").value;
+
+            if (!selectedTime || !massageType || !duration) {
+                alert("Veuillez sélectionner tous les détails de votre réservation.");
+                return;
+            }
+
+            const [hours, minutes] = selectedTime.split(':');
+            const startDate = new Date(selectedDate);
+            startDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            
+            const endDate = new Date(startDate.getTime() + parseInt(duration) * 60000);
+            
+            const googleCalendarLink = createGoogleCalendarLink(massageType, duration, startDate, endDate);
+
+            document.getElementById("confirmationMessage").textContent = `Votre réservation pour un massage ${massageType} de ${duration} minutes le ${startDate.toLocaleDateString('fr-FR')} à ${selectedTime} est confirmée !`;
+            document.getElementById("googleCalendarLink").setAttribute("href", googleCalendarLink);
+            document.getElementById("confirmationPopup").style.display = 'block';
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
